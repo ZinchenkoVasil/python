@@ -79,7 +79,7 @@ else:
 if len(sys.argv) > 2:
     mode = sys.argv[2]
 else:
-    mode = '-csv' #'-json'
+    mode = '--csv' #'-json'
 if len(sys.argv) > 3:
     city_name = sys.argv[3]
 else:
@@ -95,7 +95,7 @@ if os.path.exists(db_filename):
     else:
         cities = Select_All(db_filename)
 
-    if mode == '-json':
+    if mode == '--json':
 # Записываем объект Python в файл в виде JSON
         try:
             with open(filename, 'w', encoding='UTF-8', ) as f:
@@ -104,7 +104,7 @@ if os.path.exists(db_filename):
         except:
             print("Error!")
 
-    elif mode == '-csv':
+    elif mode == '--csv':
         # Запись в CSV
         # Создание диалекта
         csv.register_dialect('excel-semicolon', delimiter=';')
