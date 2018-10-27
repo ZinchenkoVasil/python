@@ -105,6 +105,7 @@ import datetime
 import json
 import requests
 from requests.auth import HTTPDigestAuth
+import tzlocal
 
 def create_db(db_filename):
     conn = sqlite3.connect(db_filename)
@@ -132,16 +133,16 @@ def Insert_db(db_filename, city):
     # Insert
     with sqlite3.connect(db_filename) as conn:
         conn.execute("""
-            insert into weather (id_city,name,date_registr,temperature,id_weather) VALUES (?,?,?,?,?)""", (
+            insert into weather (id_city,city,date_registr,temperature,id_weather) VALUES (?,?,?,?,?)""", (
                 city["id"],
                 city["name"],
-                datetime.date.today(),
+                city["date_registr"],
                 city["temperature"],
                 city["id_weather"]
             )
         )
 
-def Select_db(db_filename, city_id, date_registr):
+def Select_db(db_filename, id_city):
     with sqlite3.connect(db_filename) as conn:
     # Select
     # Объекты connection имеют атрибут row_factory, который позволяет вызывать
@@ -150,22 +151,24 @@ def Select_db(db_filename, city_id, date_registr):
         conn.row_factory = sqlite3.Row
 
         cur = conn.cursor()
-        cur.execute("select * from weather where city_id = :city_id and date_registr = :date_registr",{'city_id': city_id, 'date_registr': date_registr})
-        city = {}
+        cur.execute("select * from weather where id_city = :id_city",
+                    {'id_city': id_city})
+        c = {}
         for row in cur.fetchall():
             id, name, date_registr, temperature, id_weather = row
-            city["id"] = id
-            city["name"] = name
-            city["date_registr"] = date_registr
-            city["temperature"] = temperature
-            city["id_weather"] = id_weather
-        return city
+            c["id"] = id
+            c["name"] = name
+            c["date_registr"] = date_registr
+            c["temperature"] = temperature
+            c["id_weather"] = id_weather
+            return c
+        return None
 
 def Update_db(db_filename, city):
     with sqlite3.connect(db_filename) as conn:
     # Update
         cur = conn.cursor()
-        cur.execute("update weather set temperature=:temperature where id=:id and date_registr = :date_registr",
+        cur.execute("update weather set temperature=:temperature, date_registr = :date_registr where id_city=:id",
                         {'temperature': city["temperature"], 'id': city["id"], 'date_registr': city["date_registr"]})
 
 
@@ -226,18 +229,27 @@ if os.path.exists("city.list.json"):
 
             print("The response contains {0} properties".format(len(jData)))
             print("\n")
-            for key in jData:
-                print(key + " : " + str(jData[key]))
+            print(jData)
+            try:
+                dict = (jData["list"])[0]
                 city = {}
-                city["id"] = key["id"]
-                city["name"] = key["name"]
-                city["id_weather"] = ((key["weather"])[0])["id"]
-                city["temperature"] = (key["main"])["temp"]
-                city["date_registr"] = datetime.date.today()
-                if Select_db(db_filename, city["id"],datetime.date.today()):
+                city["id"] = dict["id"]
+                city["name"] = dict["name"]
+                city["id_weather"] = ((dict["weather"])[0])["id"]
+                city["temperature"] = (dict["main"])["temp"]
+                unix_timestamp = int(dict["dt"])
+                local_timezone = tzlocal.get_localzone()  # get pytz timezone
+                city["date_registr"] = datetime.datetime.fromtimestamp(unix_timestamp, local_timezone)
+                print(city)
+            except:
+                print("Ошибка парсинга!")
+            try:
+                if Select_db(db_filename, city["id"]):
                     Update_db(db_filename, city)
                 else:
                     Insert_db(db_filename, city)
+            except:
+                print("Ошибка базы данных")
         else:
         # If response code is not ok (200), print the resulting http error code with description
             myResponse.raise_for_status()
