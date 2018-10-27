@@ -128,7 +128,7 @@ def create_db(db_filename):
         """)
 
 
-
+#добавление города в БД!!!
 def Insert_db(db_filename, city):
     # Insert
     with sqlite3.connect(db_filename) as conn:

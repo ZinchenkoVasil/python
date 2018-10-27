@@ -45,7 +45,7 @@ def Select_By_City(db_filename, city):
             lst.append(c)
         return lst
 
-#выборка конкретного города
+#выборка всех городов из БД
 def Select_All(db_filename):
     with sqlite3.connect(db_filename) as conn:
     # Select
@@ -75,11 +75,11 @@ def Select_All(db_filename):
 if len(sys.argv) > 1:
     filename = sys.argv[1]
 else:
-    filename = 'file_out.json'
+    filename = 'file_out.csv'
 if len(sys.argv) > 2:
     mode = sys.argv[2]
 else:
-    mode = '-json'
+    mode = '-csv' #'-json'
 if len(sys.argv) > 3:
     city_name = sys.argv[3]
 else:
