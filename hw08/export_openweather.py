@@ -71,15 +71,15 @@ def Select_All(db_filename):
 
 
 # анализ параметров скрипта
-# 1) filename 2) mode (csv, json) 3) необязательный параметр city_name
+#1) mode (csv, json) 2) filename  3) необязательный параметр city_name
 if len(sys.argv) > 1:
-    filename = sys.argv[1]
+    mode = sys.argv[1]
+else:
+    mode = '--csv' #'-json'    
+if len(sys.argv) > 2:
+    filename = sys.argv[2]
 else:
     filename = 'file_out.csv'
-if len(sys.argv) > 2:
-    mode = sys.argv[2]
-else:
-    mode = '--csv' #'-json'
 if len(sys.argv) > 3:
     city_name = sys.argv[3]
 else:
@@ -100,9 +100,9 @@ if os.path.exists(db_filename):
         try:
             with open(filename, 'w', encoding='UTF-8', ) as f:
                 json.dump(cities, f, ensure_ascii=False)
-            print("файл создался успешно!")
+                print("файл создался успешно!")
         except:
-            print("Error!")
+            print("Ошибка при создании файла!")
 
     elif mode == '--csv':
         # Запись в CSV
@@ -122,6 +122,6 @@ if os.path.exists(db_filename):
                 except:
                     print("Error!")
     else:
-        print("формат выходного файла задан неправильно! Введите вторым параметром скрипта [json] или [csc]")
+        print("формат выходного файла задан неправильно! Введите первым параметром скрипта [--json] или [--csc]")
 else:
     print("файл БД  'weather.db' не найден!")
