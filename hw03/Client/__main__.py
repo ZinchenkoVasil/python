@@ -36,7 +36,15 @@ data = s.recv(1000000)
 response = json.loads(data.decode('utf-8'))
 if int(response["response"]) == 200:
     print("OK")
-else:
-    print(response["alert"])
+print(response["alert"])
+
+#request = {}
+#request['action'] = 'upper_text'c
+#request['data'] = 'test'
+#s.send(json.dumps(request).encode())
+#data = s.recv(1000000)
+#response = data.decode('utf-8')
+#print(response)
+
 s.send(json.dumps(quit_session).encode())
 s.close()
