@@ -4,6 +4,12 @@ import json
 import sys
 import time
 
+from Log.client_log_config import *
+
+# Обратите внимание, логгер уже создан в модуле log_config,
+# теперь нужно его просто получить
+#logger = logging.getLogger('client.main')
+
 message_from_client = {
         "action": "presence",
         "time": "",
@@ -28,23 +34,24 @@ try:
 except:
     port = 7777
 
+logger.info('Запуск клиента-------------------------------------------------------------')
+
 s = socket(AF_INET, SOCK_STREAM)  # Создать сокет TCP
-s.connect((addr, port))   # Соединиться с сервером
-message_from_client['time'] = time.ctime(time.time())
-s.send(json.dumps(message_from_client).encode())
-data = s.recv(1000000)
-response = json.loads(data.decode('utf-8'))
-if int(response["response"]) == 200:
-    print("OK")
-print(response["alert"])
-
-#request = {}
-#request['action'] = 'upper_text'c
-#request['data'] = 'test'
-#s.send(json.dumps(request).encode())
-#data = s.recv(1000000)
-#response = data.decode('utf-8')
-#print(response)
-
-s.send(json.dumps(quit_session).encode())
+logger.debug("Создать сокет TCP")
+try:
+    s.connect((addr, port))   # Соединиться с сервером
+    logger.debug("Соединиться с сервером")
+    message_from_client['time'] = time.ctime(time.time())
+    s.send(json.dumps(message_from_client).encode())
+    logger.debug("Послали сообщение серверу")
+    data = s.recv(1000000)
+    logger.debug("Приняли сообщение от сервера")
+    response = json.loads(data.decode('utf-8'))
+    if int(response["response"]) == 200:
+        print("OK")
+    print(response["alert"])
+    s.send(json.dumps(quit_session).encode())
+    logger.debug("Послали серверу на закрытие соединения")
+except:
+    logger.critical('You can not connect with server! No address was supplied.')
 s.close()
