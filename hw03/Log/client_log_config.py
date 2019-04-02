@@ -19,7 +19,7 @@ logger.addHandler(fh)
 logger.setLevel(logging.DEBUG)
 
 # Создаем потоковый обработчик логирования (по умолчанию sys.stderr):
-console = logging.StreamHandler()
-console.setLevel(logging.DEBUG)
-console.setFormatter(formatter)
-logger.addHandler(console)
+#console = logging.StreamHandler()
+#console.setLevel(logging.DEBUG)
+#console.setFormatter(formatter)
+#logger.addHandler(console)
