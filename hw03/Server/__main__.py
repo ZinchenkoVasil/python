@@ -1,13 +1,13 @@
 # Программа сервера для получения приветствия от клиента и отправки ответа
-from socket import *
 import json
 import sys
 import argparse
 from Server.text import routes
-
-import logging
+from Log.server_log_config import *
 import select
 from socket import socket, AF_INET, SOCK_STREAM
+from queue import Queue
+from threading import Thread
 
 def parsing(data):
     logger.debug("сервер принял сообщение от клиента")
@@ -40,60 +40,63 @@ def parsing(data):
         logger.error("клиент работает по неизвестному протоколу!")
     return response_dict
 
+def read_request(requests,sock,all_clients):
+    try:
+        data = sock.recv(1024).decode('utf-8')
+        request = parsing(data)  # парсинг сообщения от клиента
+        requests.put(request)
+        print("сообщение от клиента получено")
+    except:
+        print('Клиент {} {} отключился'.format(sock.fileno(), sock.getpeername()))
+        sock.close()
+        all_clients.remove(sock)
+
 
 def read_requests(r_clients, all_clients):
-   """ Чтение запросов из списка клиентов
-   """
-#   responses = {}  # Словарь ответов сервера вида {сокет: запрос}
-   response = None
-   for sock in r_clients:
-       try:
-           data = sock.recv(1024).decode('utf-8')
-           response = parsing(data) #парсинг сообщения от клиента
-           print("сообщение от клиента получено")
-       except:
-           print('Клиент {} {} отключился'.format(sock.fileno(), sock.getpeername()))
-           sock.close()
-           all_clients.remove(sock)
+    requests_queue = Queue()  # Очередь ответов сервера вида
+    for sock in r_clients:
+#        t = Thread(target=read_request, args=(requests_queue,sock,all_clients))
+#        t.start()
+        read_request(requests_queue,sock,all_clients)
+    return requests_queue #надо в цикле заполнить очередь
 
-   return response
+
+def write_response(response,sock,all_clients):
+    try:
+        # Подготовить и отправить ответ сервера
+        print("Подготовить и отправить ответ сервера")
+        resp = json.dumps(response).encode('utf-8')
+        # Эхо-ответ
+        sock.send(resp)
+        print(f"Эхо-ответ {resp} выслали всем слушающим клиентам")
+    except:  # Сокет недоступен, клиент отключился
+        print('Клиент {} {} отключился'.format(sock.fileno(), sock.getpeername()))
+        sock.close()
+        all_clients.remove(sock)
 
 
 def write_responses(response, w_clients, all_clients):
-   """ Эхо-ответ сервера клиентам, от которых были запросы
-   """
-
-   for sock in w_clients:
-#       for request in requests:
-           try:
-               # Подготовить и отправить ответ сервера
-               print("Подготовить и отправить ответ сервера")
-               resp = json.dumps(response).encode('utf-8')
-               # Эхо-ответ
-               sock.send(resp)
-               print(f"Эхо-ответ {resp} выслали всем слушающим клиентам")
-           except:  # Сокет недоступен, клиент отключился
-               print('Клиент {} {} отключился'.format(sock.fileno(), sock.getpeername()))
-               sock.close()
-               all_clients.remove(sock)
+    for sock in w_clients:
+        t = Thread(target=write_response, args=(response, sock, all_clients))
+        t.start()
 
 def mainloop():
    """ Основной цикл обработки запросов клиентов
    """
-   address = ('', 10000)
    clients = []
 
    s = socket(AF_INET, SOCK_STREAM)  # Создает сокет TCP
-   logger.debug("Создает сокет TCP")
+   print("Создает сокет TCP")
    s.bind((args.addr, args.port))  # Присваивает порт
-   logger.debug("Присваивает порт")
+   print("Присваивает порт")
    s.listen(5)  # Переходит в режим ожидания запросов;
-   logger.debug("Переходит в режим ожидания запросов")
+   print("Переходит в режим ожидания запросов")
    s.settimeout(0.2)  # Таймаут для операций с сокетом
    while True:
        try:
            conn, addr = s.accept()  # Проверка подключений
        except OSError as e:
+#           print("timeout вышел")
            pass  # timeout вышел
        else:
            print("Получен запрос на соединение от %s" % str(addr))
@@ -105,19 +108,24 @@ def mainloop():
            w = []
            try:
                r, w, e = select.select(clients, clients, [], wait)
-#               print("r_clients:", r)
-#               print("w_clients", w)
            except:
                pass  # Ничего не делать, если какой-то клиент отключился
 
-           response = read_requests(r, clients)  # Сохраним запросы клиентов
-           if response:
-               write_responses(response, w, clients)  # Выполним отправку ответов клиентам
+           requests_queue = read_requests(r, clients)  # Сохраним запросы клиентов
+           if not requests_queue.empty():
+               while True:
+                   if requests_queue.empty():
+                       break
+                   item = requests_queue.get()
+                   # Обработать элемент
+                   write_responses(item, w, clients)  # Выполним отправку ответов клиентам
+                   requests_queue.task_done()
+               # Конец. Сообщить, что сигнальная метка была принята, и выйти
+
 
 
 # Обратите внимание, логгер уже создан в модуле log_config,
 # теперь нужно его просто получить
-logger = logging.getLogger('server.main')
 logger.info('Запуск сервера-------------------------------------------------------------')
 
 parser = argparse.ArgumentParser()
